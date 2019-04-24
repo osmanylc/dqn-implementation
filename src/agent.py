@@ -1,52 +1,56 @@
-from collections import deque
+import random
 
 import gym
-import dqn
-import utils
-import train
+import numpy as np
+
+from . import dqn
+
+# set random seed
+random.seed(0)
+
 
 class DQNAgent:
     
     def __init__(self):
-        self.s_seq = []
-        self.phi_seq = []
-        self.replay_mem = ReplayMemory()
+        """
+        Create an agent that uses DQN to guide its policy.
 
-        self.q_net = QNet()
+        This agent contains:
+            - A history of the states it has been in, for its current episode.
+            - A history of processed states for its current episode.
+            - The recent transitions it has made.
+            - The epsilon greedy strategy it's using.
+         """
+        self.qnet = dqn.QNet(6)
         self.epsilon = .9
+        self.annealing_steps = int(1e6)
+        self.min_epsilon = .1
+        self.step_size = (self.epsilon - self.min_epsilon) / self.annealing_steps
         
         self.env = gym.envs.make('PongNoFrameskip-v4')
-        
-    
-    
-    def act(self):
-        pass
-    
-    def reset(self):
-        pass
-    
+
+    def act(self, phi):
+        """
+
+        :param phi:
+        :return:
+        """
+        # select action using epsilon greedy strategy
+        u = random.random()
+        if u < self.epsilon:  # with probability epsilon, select action uniformly at random
+            a = random.randrange(self.env.action_space.n)
+        else:  # otherwise, select best action
+            a = self.get_best_action(phi)
+
+        self._update_epsilon()
+        return a
+
+    def get_best_action(self, phi):
+        return np.argmax(self.qnet(phi))
+
     def _train(self):
         pass
     
     def _update_epsilon(self):
-        pass
-
-
-
-class ReplayMemory:
-    
-    def __init__(self, N, sample_size):
-        self.N = N
-        self.sample_size = sample_size
-        self.transitions = deque()
-        
-    def sample(self, k=None):
-        if k is None:
-            k = self.sample_size
-        return np.random.choice(self.transitions, k)
-
-    def add(e):
-        if len(self.transitions >= self.N):
-            self.transitions.popleft()
-        self.transitions.append(e)
- 
+        if self.epsilon > self.min_epsilon:
+            self.epsilon -= self.step_size
