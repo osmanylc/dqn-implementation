@@ -6,6 +6,7 @@ import gym
 
 import torch
 from torch import nn
+from torch import optim
 from torch.nn import functional as F
 
 # set random seed
@@ -26,13 +27,12 @@ class DQNAgent:
          """
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         self.qnet = QNet(6).to(device=self.device)
+        self.optimizer = optim.RMSprop(self.qnet.parameters())
 
         self.epsilon = .9
         self.annealing_steps = int(1e6)
         self.min_epsilon = .1
         self.step_size = (self.epsilon - self.min_epsilon) / self.annealing_steps
-        
-        self.env = gym.envs.make('PongNoFrameskip-v4')
 
     def act(self, phi):
         # select action using epsilon greedy strategy
