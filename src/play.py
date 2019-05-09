@@ -14,7 +14,7 @@ agt.qnet.eval()
 
 obs_history = utils.ObsHistory()
 
-env = gym.envs.make('PongNoFrameskip-v4')
+env = gym.envs.make('Pong-v4')
 obs = env.reset()
 obs_history.reset(obs)
 
