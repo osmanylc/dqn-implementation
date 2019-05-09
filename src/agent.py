@@ -25,14 +25,17 @@ class DQNAgent:
             - The recent transitions it has made.
             - The epsilon greedy strategy it's using.
          """
+        self.env = gym.envs.make('Pong-v4')
+
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-        self.qnet = QNet(6).to(device=self.device)
+        self.qnet = QNet(self.env.action_space.n).to(device=self.device)
         self.optimizer = optim.RMSprop(self.qnet.parameters())
 
         self.epsilon = .9
         self.annealing_steps = int(1e6)
         self.min_epsilon = .1
         self.step_size = (self.epsilon - self.min_epsilon) / self.annealing_steps
+
 
     def act(self, phi):
         # select action using epsilon greedy strategy

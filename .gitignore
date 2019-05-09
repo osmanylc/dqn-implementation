@@ -105,3 +105,6 @@ venv.bak/
 
 # xml configs
 *.xml
+
+# Pytorch models
+*.pt
