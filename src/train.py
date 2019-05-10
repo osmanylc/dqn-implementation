@@ -18,7 +18,7 @@ def make_y(transitions, agt):
         if done:
             y.append(r_t)
         else:
-            x = phi_t.unsqueeze(0)
+            x = phi_t1.unsqueeze(0)
             y.append(r_t + .99 * agt.get_best_values(x).item())
 
     return torch.tensor(y, dtype=torch.float, device=agt.device)

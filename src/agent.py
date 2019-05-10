@@ -36,7 +36,6 @@ class DQNAgent:
         self.min_epsilon = .1
         self.step_size = (self.epsilon - self.min_epsilon) / self.annealing_steps
 
-
     def act(self, phi):
         # select action using epsilon greedy strategy
         u = random.random()

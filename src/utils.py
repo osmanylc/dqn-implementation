@@ -24,41 +24,44 @@ def process_frame(frame):
 class ReplayMemory:
 
     def __init__(self, n, sample_size):
-        self.sample_size = sample_size
-        self.transitions = []
-        self.idx = 0
         self.n = n
+        self.sample_size = sample_size
+
+        self.xs = np.empty((self.n, 84, 84), dtype=np.uint8)
+        self.actions = np.empty(self.n, dtype=np.uint8)
+        self.rewards = np.empty(self.n, dtype=np.int8)
+        self.dones = np.empty(self.n, dtype=np.bool)
+        self.idx = 0
+        self.size = 0
+
 
     def sample(self, k=None):
         if k is None:
             k = self.sample_size
 
-        mem_size = self.size()
-
         # start at 3 because we need 4 frames
         # end at mem_size-1 because we need phi_t1
-        transition_idxs = random.sample(range(3, mem_size-1), k)
+        transition_idxs = random.sample(range(3, self.size-1), k)
 
         return [self.get_transition(i) for i in transition_idxs]
 
     def store(self, s, a, r, done):
-        if len(self.transitions) < self.n:
-            self.transitions.append(None)
-
         x = process_frame(s)
-        self.transitions[self.idx] = (x, a, r, done)
+
+        self.xs[self.idx] = x
+        self.actions[self.idx] = a
+        self.rewards[self.idx] = r
+        self.dones[self.idx] = done
 
         self.idx  = (self.idx + 1) % self.n
-
-    def size(self):
-        return len(self.transitions)
+        self.size = min(self.size + 1, self.n)
 
     def get_phi(self, i):
         assert i >= 3
 
-        frames = [self.transitions[i - j][0]
+        frames = [torch.tensor(self.xs[i - j], dtype=torch.float)
                   for j in [3, 2, 1, 0]]
-        phi = torch.cat(frames)
+        phi = torch.stack(frames)
 
         return phi
 
@@ -66,9 +69,7 @@ class ReplayMemory:
         phi_t = self.get_phi(t)
         phi_t1 = self.get_phi(t + 1)
 
-        _, a_t, r_t, done = self.transitions[t]
-
-        return (phi_t, a_t, r_t, phi_t1, done)
+        return (phi_t, self.actions[t], self.rewards[t], phi_t1, self.dones[t])
 
 
 class ObsHistory:
