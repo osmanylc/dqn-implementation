@@ -1,5 +1,6 @@
 import random
 from collections import deque
+import time
 
 import torch
 import numpy as np
@@ -13,8 +14,7 @@ def process_frame(frame):
     pipeline = transforms.Compose([
         transforms.ToPILImage(),  # turn numpy ndarray into PIL image
         transforms.Grayscale(),  # convert image to grayscale
-        transforms.Resize((110, 84)),  # resize image to 110 x 84
-        transforms.CenterCrop(84),  # crop at the center into 84 x 84 image
+        transforms.Resize((84,84)),  # resize image to 84 x 84
         transforms.ToTensor()  # convert PIL image to torch tensor
     ])
 
@@ -27,10 +27,10 @@ class ReplayMemory:
         self.n = n
         self.sample_size = sample_size
 
-        self.xs = np.empty((self.n, 84, 84), dtype=np.uint8)
-        self.actions = np.empty(self.n, dtype=np.uint8)
-        self.rewards = np.empty(self.n, dtype=np.int8)
-        self.dones = np.empty(self.n, dtype=np.bool)
+        self.xs = torch.empty((self.n, 84, 84), dtype=torch.float)
+        self.actions = torch.empty(self.n, dtype=torch.long)
+        self.rewards = torch.empty(self.n, dtype=torch.float)
+        self.dones = torch.empty(self.n, dtype=torch.uint8)
         self.idx = 0
         self.size = 0
 
@@ -41,9 +41,14 @@ class ReplayMemory:
 
         # start at 3 because we need 4 frames
         # end at mem_size-1 because we need phi_t1
-        transition_idxs = random.sample(range(3, self.size-1), k)
+        idxs = torch.randint(3, self.size-1, (k,))
 
-        return [self.get_transition(i) for i in transition_idxs]
+        phi, phi_1 = self.get_phis(idxs)
+        return (phi,
+                self.actions.index_select(0, idxs),
+                self.rewards.index_select(0, idxs),
+                phi_1,
+                self.dones.index_select(0,idxs))
 
     def store(self, s, a, r, done):
         x = process_frame(s)
@@ -51,23 +56,29 @@ class ReplayMemory:
         self.xs[self.idx] = x
         self.actions[self.idx] = a
         self.rewards[self.idx] = r
-        self.dones[self.idx] = done
+        self.dones[self.idx] = int(done)
 
         self.idx  = (self.idx + 1) % self.n
         self.size = min(self.size + 1, self.n)
 
     def get_phi(self, i):
-        assert i >= 3
+        return self.xs[i-3:i+1]
 
-        frames = [torch.tensor(self.xs[i - j], dtype=torch.float)
-                  for j in [3, 2, 1, 0]]
-        phi = torch.stack(frames)
+    def get_phis(self, idxs):
+        phi_t = []
+        phi_t1 = []
 
-        return phi
+        for i in idxs:
+            phi_t.append(self.get_phi(i))
+            phi_t1.append(self.get_phi(i+1))
+
+        return torch.stack(phi_t), torch.stack(phi_t1)
+
 
     def get_transition(self, t):
         phi_t = self.get_phi(t)
         phi_t1 = self.get_phi(t + 1)
+
 
         return (phi_t, self.actions[t], self.rewards[t], phi_t1, self.dones[t])
 
