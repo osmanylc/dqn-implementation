@@ -1,1 +1,1 @@
-# DQN Pong Player
+# DQN Atari Player
